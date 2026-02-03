@@ -1,178 +1,73 @@
 <!doctype html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Dramabox Player</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Dramabox Player – Auto</title>
   <style>
-    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    body { margin: 0; background:#0b0f17; color:#e9eefc; }
-    header { position: sticky; top:0; z-index: 10; background:#0b0f17;
-      padding: 14px 14px 10px; border-bottom: 1px solid rgba(255,255,255,.08); }
-    h1 { font-size: 16px; margin: 0 0 10px; font-weight: 900; }
-    .row { display:flex; gap:10px; flex-wrap: wrap; }
-    input, select, button {
-      background:#121a29; color:#e9eefc; border: 1px solid rgba(255,255,255,.12);
-      padding: 10px 12px; border-radius: 10px; font-size: 14px; outline: none;
-    }
-    input { flex: 1 1 170px; }
-    button { cursor: pointer; font-weight: 900; }
-    button:active { transform: scale(.99); }
-    main { padding: 14px; display: grid; gap: 14px; }
-    .card { background:#0f1625; border:1px solid rgba(255,255,255,.08); border-radius: 14px; overflow: hidden; }
-    .card h2 { margin:0; padding: 12px 12px 0; font-size: 14px; }
-    .card .sub { padding: 6px 12px 12px; opacity:.8; font-size: 12px; }
-    video { width: 100%; border-radius: 14px; background:#000; }
-    .player { padding: 12px; display:grid; gap:10px; }
-    .status { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.08); font-size: 12px; white-space: pre-wrap; }
-    .list { display:grid; gap:10px; padding:12px; }
-    .chap { display:flex; align-items:center; justify-content: space-between; gap: 10px;
-      background:#121a29; border:1px solid rgba(255,255,255,.10); border-radius: 12px; padding: 10px; }
-    .chap .left { min-width: 0; }
-    .chap .ct { font-weight: 900; font-size: 13px; }
-    .chap .cs { font-size: 12px; opacity:.8; }
+    body{margin:0;background:#0b0f17;color:#fff;font-family:system-ui}
+    header{padding:14px;font-weight:900}
+    .card{margin:12px;border-radius:14px;background:#121a29;padding:12px}
+    video{width:100%;border-radius:14px;background:#000}
+    button{width:100%;padding:14px;border-radius:14px;border:none;
+      background:#2563eb;color:#fff;font-weight:900;font-size:16px}
+    .status{margin-top:10px;font-size:12px;opacity:.85;white-space:pre-wrap}
   </style>
 </head>
 <body>
-  <header>
-    <h1>Dramabox Player</h1>
-    <div class="row">
-      <input id="baseUrl" value="https://dramabox.bagahproject.dev" placeholder="Base URL" />
-      <input id="bookId" value="42000004347" placeholder="bookId (contoh: 42000004347)" />
-      <select id="quality">
-        <option value="default" selected>Default (isDefault=1)</option>
-        <option value="1080">1080p</option>
-        <option value="720">720p</option>
-        <option value="540">540p</option>
-      </select>
-      <button id="btnLoad">Load Chapters</button>
-    </div>
-  </header>
+<header>Dramabox Player (Auto)</header>
 
-  <main>
-    <section class="card">
-      <h2>Player</h2>
-      <div class="sub" id="nowPlaying">Belum ada video dipilih.</div>
-      <div class="player">
-        <video id="video" controls playsinline></video>
-        <div class="status" id="status">Status: siap.</div>
-      </div>
-    </section>
+<div class="card">
+  <video id="video" controls playsinline></video>
+  <button id="btn">▶️ PLAY EPISODE 1</button>
+  <div class="status" id="status">Siap.</div>
+</div>
 
-    <section class="card">
-      <h2>Chapters</h2>
-      <div class="sub" id="chapInfo">Klik “Load Chapters”.</div>
-      <div class="list" id="chapters"></div>
-    </section>
-  </main>
+<script>
+const BASE = "https://dramabox.bagahproject.dev";
+const BOOK_ID = "42000004347"; // FIXED
+const QUALITY = 720; // default aman
 
-  <script>
-    const $ = (id) => document.getElementById(id);
-    const statusEl = $("status");
-    const chaptersEl = $("chapters");
-    const chapInfoEl = $("chapInfo");
-    const nowPlayingEl = $("nowPlaying");
-    const videoEl = $("video");
+const video = document.getElementById("video");
+const statusEl = document.getElementById("status");
+const btn = document.getElementById("btn");
 
-    function setStatus(msg, obj) {
-      if (obj) msg += "\n\n" + JSON.stringify(obj, null, 2);
-      statusEl.textContent = "Status: " + msg;
-    }
+function status(t){ statusEl.textContent = t; }
 
-    function base() {
-      return $("baseUrl").value.trim().replace(/\/+$/, "");
-    }
+async function loadAndPlay(){
+  try{
+    status("Mengambil chapter...");
+    const res = await fetch(`${BASE}/api/chapters?bookId=${BOOK_ID}`);
+    const json = await res.json();
+    const chapters = json.data || [];
+    if(!chapters.length){ status("Chapter kosong."); return; }
 
-    async function apiGet(path) {
-      const url = base() + path;
-      setStatus("GET " + url);
-      const res = await fetch(url);
-      const text = await res.text();
-      let data = null;
-      try { data = JSON.parse(text); } catch (e) {}
-      if (!res.ok) {
-        setStatus("HTTP " + res.status + " (gagal)", data || { raw: text });
-        throw new Error("HTTP " + res.status);
+    const ch = chapters[0]; // EP 1
+    let url = null;
+
+    for(const cdn of ch.cdnList || []){
+      for(const v of cdn.videoPathList || []){
+        if(v.quality === QUALITY){ url = v.videoPath; break; }
       }
-      setStatus("OK");
-      return data ?? text;
+      if(url) break;
     }
 
-    function pickVideoPath(ch, wantedQuality) {
-      const cdnList = ch?.cdnList || [];
-      for (const cdn of cdnList) {
-        const list = cdn?.videoPathList || [];
-        if (!list.length) continue;
-
-        if (wantedQuality !== "default") {
-          const q = Number(wantedQuality);
-          const found = list.find(v => Number(v.quality) === q);
-          if (found?.videoPath) return found.videoPath;
-        }
-
-        const def = list.find(v => Number(v.isDefault) === 1);
-        if (def?.videoPath) return def.videoPath;
-
-        const any = list.find(v => !!v.videoPath);
-        if (any?.videoPath) return any.videoPath;
-      }
-      return null;
+    if(!url){
+      url = ch.cdnList?.[0]?.videoPathList?.[0]?.videoPath;
     }
 
-    function play(url, label) {
-      nowPlayingEl.textContent = label;
-      videoEl.src = url;
-      videoEl.play().catch(()=>{});
-      setStatus("Playing ✅");
-    }
+    if(!url){ status("Video tidak ditemukan."); return; }
 
-    async function loadChapters() {
-      try {
-        chaptersEl.innerHTML = "";
-        const bookId = $("bookId").value.trim();
-        if (!bookId) { setStatus("Isi bookId dulu."); return; }
+    video.src = url;
+    await video.play();
+    status("Playing EP 1 ✅");
+  }catch(e){
+    status("Error: " + e.message);
+  }
+}
 
-        chapInfoEl.textContent = "Loading chapters bookId: " + bookId + " ...";
-        const data = await apiGet("/api/chapters?bookId=" + encodeURIComponent(bookId));
-        const arr = Array.isArray(data) ? data : (data?.data ?? []);
-        if (!arr.length) { chapInfoEl.textContent = "Chapters kosong."; return; }
-
-        chapInfoEl.textContent = "Chapters ditemukan: " + arr.length + " episode. Pilih Play.";
-        const wantedQuality = $("quality").value;
-
-        arr.forEach((ch) => {
-          const chapterName = ch.chapterName || ch.chapter_title || ch.title || ("Chapter " + (ch.chapterId ?? ""));
-          const chapterId = ch.chapterId || "";
-
-          const row = document.createElement("div");
-          row.className = "chap";
-
-          const left = document.createElement("div");
-          left.className = "left";
-          left.innerHTML = `<div class="ct">${chapterName}</div><div class="cs">chapterId: ${chapterId}</div>`;
-
-          const btn = document.createElement("button");
-          btn.textContent = "Play";
-          btn.onclick = () => {
-            const url = pickVideoPath(ch, wantedQuality);
-            if (!url) { setStatus("Tidak menemukan videoPath di chapter ini.", ch); return; }
-            play(url, chapterName + " (" + wantedQuality + ")");
-          };
-
-          row.appendChild(left);
-          row.appendChild(btn);
-          chaptersEl.appendChild(row);
-        });
-      } catch (e) {
-        // already reported in setStatus
-      }
-    }
-
-    $("btnLoad").addEventListener("click", loadChapters);
-
-    // Auto load on open
-    loadChapters();
-  </script>
+btn.onclick = loadAndPlay;
+loadAndPlay(); // auto play on open
+</script>
 </body>
 </html>
